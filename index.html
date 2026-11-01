@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Overlord: Level Devil Troll Edition</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap');
+
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #0a0306;
+            color: #e0f7fa;
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Scanline CRT Overlay */
+        .crt-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        /* Neon Glow Utilities */
+        .neon-border {
+            border: 2px solid #ff1744;
+            box-shadow: 0 0 15px rgba(255, 23, 68, 0.6), inset 0 0 10px rgba(255, 23, 68, 0.4);
+        }
+
+        .neon-text-red {
+            color: #ff1744;
+            text-shadow: 0 0 8px rgba(255, 23, 68, 0.8);
+        }
+
+        .neon-text-cyan {
+            color: #00e5ff;
+            text-shadow: 0 0 8px rgba(0, 229, 255, 0.8);
+        }
+
+        .neon-text-yellow {
+            color: #ffd600;
+            text-shadow: 0 0 8px rgba(255, 214, 0, 0.8);
+        }
+
+        /* Touch Control Buttons */
+        .touch-btn {
+            background: rgba(255, 23, 68, 0.2);
+            border: 2px solid #ff1744;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(255, 23, 68, 0.4);
+            color: #ffffff;
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .touch-btn:active {
+            background: rgba(255, 23, 68, 0.6);
+            transform: scale(0.95);
+        }
+
+        /* Modal Backdrop */
+        .modal-backdrop {
+            backdrop-filter: blur(8px);
+            background: rgba(10, 3, 6, 0.88);
+        }
+
+        /* Glitch Warning Alert */
+        #glitch-banner {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body class="select-none bg-[#0a0306] flex flex-col items-center justify-center min-h-screen relative overflow-hidden">
+
+    <!-- CRT Scanlines Effect -->
+    <div class="crt-overlay"></div>
+
+    <!-- Main Game Container -->
+    <div id="game-wrapper" class="relative w-full max-w-[900px] p-2 md:p-4 flex flex-col items-center">
+        
+        <!-- Retro Header HUD -->
+        <div id="hud-header" class="w-full mb-2 bg-[#12060c]/90 border border-[#ff1744]/40 rounded-xl p-3 flex flex-wrap items-center justify-between text-xs sm:text-sm font-bold shadow-lg backdrop-blur-md">
+            <div class="flex items-center space-x-4">
+                <div class="flex flex-col">
+                    <span class="text-gray-400 text-[10px] uppercase tracking-widest">Stage</span>
+                    <span id="hud-level" class="neon-text-yellow text-sm sm:text-lg">01 / 15</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-gray-400 text-[10px] uppercase tracking-widest">Deaths</span>
+                    <span id="hud-deaths" class="neon-text-red text-sm sm:text-lg">0</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <div class="flex flex-col text-right">
+                    <span class="text-gray-400 text-[10px] uppercase tracking-widest">Time</span>
+                    <span id="hud-timer" class="neon-text-cyan text-sm sm:text-lg">00:00.0</span>
+                </div>
+                <div class="flex flex-col text-right hidden sm:flex">
+                    <span class="text-gray-400 text-[10px] uppercase tracking-widest">Target</span>
+                    <span id="hud-target" class="text-gray-300 text-sm sm:text-lg">00:10.0</span>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center space-x-2">
+                <button id="btn-mode-toggle" class="bg-[#1a0812] hover:bg-[#ff1744]/20 border border-[#ff1744]/60 text-[#ff1744] text-[10px] px-2.5 py-1.5 rounded-lg transition-all">
+                    MODE: <span id="mode-label">KBM</span>
+                </button>
+                <button id="btn-sfx-toggle" class="bg-[#1a0812] hover:bg-[#00e5ff]/20 border border-[#00e5ff]/60 text-[#00e5ff] text-[10px] px-2.5 py-1.5 rounded-lg transition-all">
+                    SFX: ON
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="relative w-full aspect-[16/10] bg-[#0f0408] rounded-xl overflow-hidden neon-border">
+            <canvas id="gameCanvas" width="850" height="520" class="w-full h-full block bg-[#0a0306]"></canvas>
+
+            <!-- On-Screen Reversal Banner Prompt -->
+            <div id="glitch-banner" class="absolute top-4 left-1/2 -translate-x-1/2 bg-red-900/90 border border-red-500 text-red-100 font-['Press_Start_2P'] text-[10px] sm:text-xs px-4 py-2 rounded-lg shadow-xl opacity-0 pointer-events-none z-30">
+                ⚠️ CONTROLS REVERSED! ⚠️
+            </div>
+
+            <!-- Touch Controls Overlay -->
+            <div id="touch-controls" class="absolute inset-0 pointer-events-none hidden flex flex-col justify-end p-4 z-20">
+                <div class="flex justify-between items-end w-full">
+                    <div class="flex space-x-3 pointer-events-auto">
+                        <button id="btn-left" class="touch-btn w-14 h-14 text-lg">◄</button>
+                        <button id="btn-right" class="touch-btn w-14 h-14 text-lg">►</button>
+                    </div>
+                    <div class="pointer-events-auto">
+                        <button id="btn-jump" class="touch-btn w-16 h-16 text-sm bg-[#00e5ff]/20 border-[#00e5ff] text-[#00e5ff]">JUMP</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Control Guide -->
+        <div class="w-full mt-2 flex justify-between items-center text-[10px] sm:text-xs text-gray-400 px-1">
+            <div><span class="text-gray-200 font-bold">CONTROLS:</span> <kbd class="px-1.5 py-0.5 bg-[#1f0a14] border border-gray-600 rounded text-gray-300">A</kbd> <kbd class="px-1.5 py-0.5 bg-[#1f0a14] border border-gray-600 rounded text-gray-300">D</kbd> or <kbd class="px-1.5 py-0.5 bg-[#1f0a14] border border-gray-600 rounded text-gray-300">←</kbd> <kbd class="px-1.5 py-0.5 bg-[#1f0a14] border border-gray-600 rounded text-gray-300">→</kbd> Move | <kbd class="px-1.5 py-0.5 bg-[#1f0a14] border border-gray-600 rounded text-gray-300">W</kbd> / <kbd class="px-1.5 py-0.5 bg-[#1f0a14] border border-gray-600 rounded text-gray-300">SPACE</kbd> Jump</div>
+            <div><kbd class="px-1.5 py-0.5 bg-[#1f0a14] border border-gray-600 rounded text-gray-300">R</kbd> Restart Stage</div>
+        </div>
+    </div>
+
+    <!-- STARTUP CONTROL SELECTION MODAL -->
+    <div id="startup-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-[#12060c] border-2 border-[#ff1744] rounded-2xl max-w-md w-full p-6 text-center shadow-2xl relative overflow-hidden">
+            <h1 class="text-xl sm:text-2xl font-black neon-text-red mb-2 tracking-wide font-['Press_Start_2P']">AI OVERLORD</h1>
+            <p class="text-xs text-cyan-400 mb-4 font-semibold">LEVEL DEVIL TROLL EDITION</p>
+            <p class="text-xs text-gray-300 mb-6 leading-relaxed">Select your control scheme to begin. All 15 stages feature unique dynamic troll mechanics.</p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button id="btn-select-kbm" class="py-3 px-4 bg-[#1f0814] hover:bg-[#ff1744]/30 border border-[#ff1744] rounded-xl text-white text-xs font-bold transition-all shadow-md hover:scale-105">
+                    ⌨️ KEYBOARD / PC
+                </button>
+                <button id="btn-select-touch" class="py-3 px-4 bg-[#081820] hover:bg-[#00e5ff]/30 border border-[#00e5ff] rounded-xl text-white text-xs font-bold transition-all shadow-md hover:scale-105">
+                    📱 MOBILE TOUCH
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VICTORY MODAL -->
+    <div id="victory-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="bg-[#12060c] border-2 border-[#ffd600] rounded-2xl max-w-md w-full p-6 text-center shadow-2xl">
+            <h2 class="text-lg sm:text-xl font-bold neon-text-yellow mb-2 font-['Press_Start_2P']">SYSTEM OVERRIDDEN!</h2>
+            <p class="text-xs text-gray-300 mb-4">You conquered all 15 unique troll stages of the AI Overlord core!</p>
+            
+            <div class="bg-[#0a0306] p-4 rounded-xl border border-yellow-500/30 mb-6 text-left text-xs space-y-2">
+                <div class="flex justify-between"><span>TOTAL TIME:</span><span id="final-time" class="neon-text-cyan font-bold">00:00.0</span></div>
+                <div class="flex justify-between"><span>TOTAL DEATHS:</span><span id="final-deaths" class="neon-text-red font-bold">0</span></div>
+                <div class="flex justify-between"><span>RANK:</span><span id="final-rank" class="neon-text-yellow font-bold">S-TIER TROLL MASTER</span></div>
+            </div>
+
+            <button id="btn-restart-game" class="w-full py-3 bg-[#ffd600] hover:bg-yellow-400 text-black font-black rounded-xl text-xs tracking-wider transition-all shadow-lg">
+                PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* SYNTHESIZER SOUND ENGINE */
+        class AudioFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(480, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+
+            playDeath() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(35, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            playTrigger() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(950, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.18);
+            }
+
+            playWin() {
+                if (this.muted || !this.ctx) return;
+                const notes = [400, 520, 660, 880];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.08 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.08);
+                    osc.stop(this.ctx.currentTime + idx * 0.08 + 0.2);
+                });
+            }
+
+            playTeleport() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+        }
+
+        const sfx = new AudioFX();
+
+        /* CORE ENGINE STATE */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let touchMode = false;
+        let currentLevelIdx = 0;
+        let deathCount = 0;
+        let startTime = Date.now();
+        let gameTimerInterval = null;
+        let elapsedSeconds = 0;
+
+        const GRAVITY = 0.5;
+        const JUMP_FORCE = 11.5;
+        const MOVE_SPEED = 4.2;
+
+        const keys = { left: false, right: false, jump: false };
+
+        let player = {
+            x: 80, y: 380, width: 24, height: 36, scale: 1.0,
+            vx: 0, vy: 0, grounded: false,
+            facing: 'right', gravityInverted: false,
+            inSludge: false
+        };
+
+        let controlsReversed = false;
+        let particles = [];
+        let platforms = [];
+        let hazards = [];
+        let dynamicSpikes = [];
+        let stalactites = [];
+        let triggers = [];
+        let interactivePads = [];
+        let portals = [];
+        let lasers = [];
+        let phantomPlatforms = [];
+        let goal = { x: 760, y: 380, width: 34, height: 60, isRunaway: false, hasRun: false };
+        let boulder = null;
+
+        /* 15 DISTINCT MECHANIC LEVEL DEFINITIONS */
+        const levelDefinitions = [
+            // LEVEL 1: Simple Warmup (Ambush Spring Spike)
+            {
+                title: "1. Simple Warmup", target: "00:08.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 850, height: 80, type: 'normal' });
+                    dynamicSpikes.push({ x: 580, platY: 440, width: 80, h: 0, targetH: 24, speed: 2.5, active: false });
+                    triggers.push({
+                        x: 420, width: 20,
+                        action: () => { dynamicSpikes[0].active = true; sfx.playTrigger(); }
+                    });
+                    goal = { x: 760, y: 380, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 2: Runaway Door
+            {
+                title: "2. Runaway Door", target: "00:10.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 480, height: 80, type: 'normal' });
+                    platforms.push({ x: 520, y: 440, width: 330, height: 80, type: 'normal' });
+                    hazards.push({ x: 480, y: 416, width: 40, height: 24, type: 'spike' });
+                    dynamicSpikes.push({ x: 320, platY: 440, width: 80, h: 0, targetH: 24, speed: 2.5, active: false });
+                    
+                    goal = { x: 440, y: 380, width: 34, height: 60, isRunaway: true, hasRun: false, runToX: 760 };
+                    triggers.push({
+                        x: 360, width: 20,
+                        action: () => {
+                            if (!goal.hasRun) {
+                                goal.hasRun = true;
+                                goal.x = goal.runToX;
+                                dynamicSpikes[0].active = true;
+                                sfx.playTrigger();
+                                spawnSparks(goal.x, goal.y, '#ffd600', 20);
+                            }
+                        }
+                    });
+                }
+            },
+            // LEVEL 3: The Spike Bridge
+            {
+                title: "3. The Spike Bridge", target: "00:10.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 850, height: 80, type: 'normal' });
+                    dynamicSpikes.push({ x: 300, platY: 440, width: 90, h: 0, targetH: 24, speed: 2.5, active: false });
+                    dynamicSpikes.push({ x: 520, platY: 440, width: 90, h: 0, targetH: 24, speed: 2.5, active: false });
+                    triggers.push({ x: 240, width: 20, action: () => { dynamicSpikes[0].active = true; sfx.playTrigger(); } });
+                    triggers.push({ x: 460, width: 20, action: () => { dynamicSpikes[1].active = true; sfx.playTrigger(); } });
+                    goal = { x: 760, y: 380, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 4: Spiked Boulder Run
+            {
+                title: "4. Spiked Boulder Run", target: "00:12.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 340, height: 80, type: 'normal' });
+                    platforms.push({ x: 340, y: 480, width: 120, height: 40, type: 'normal' }); // Recessed Alcove Hole
+                    platforms.push({ x: 460, y: 440, width: 390, height: 80, type: 'normal' });
+                    triggers.push({
+                        x: 200, width: 20,
+                        action: () => {
+                            if (!boulder) {
+                                boulder = { x: 820, y: 390, radius: 38, vx: -5.8 };
+                                sfx.playTrigger();
+                            }
+                        }
+                    });
+                    goal = { x: 760, y: 380, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 5: Laser Barrier
+            {
+                title: "5. Laser Barrier", target: "00:12.0",
+                spawnX: 60, spawnY: 320,
+                build: () => {
+                    platforms.push({ x: 0, y: 380, width: 160, height: 140, type: 'normal' });
+                    platforms.push({ x: 180, y: 460, width: 120, height: 60, type: 'normal' }); // Shelter 1
+                    platforms.push({ x: 320, y: 380, width: 120, height: 140, type: 'normal' });
+                    platforms.push({ x: 460, y: 460, width: 120, height: 60, type: 'normal' }); // Shelter 2
+                    platforms.push({ x: 600, y: 380, width: 250, height: 140, type: 'normal' });
+                    lasers.push({ x1: 160, x2: 600, y1: 140, y2: 390, sweepSpeed: 2.2, dir: 1, currentY: 200 });
+                    goal = { x: 770, y: 320, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 6: Phantom Steps
+            {
+                title: "6. Phantom Steps", target: "00:11.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 140, height: 80, type: 'normal' });
+                    phantomPlatforms.push({ x: 220, y: 400, width: 100, height: 20, alpha: 0.0 });
+                    phantomPlatforms.push({ x: 380, y: 360, width: 100, height: 20, alpha: 0.0 });
+                    phantomPlatforms.push({ x: 540, y: 320, width: 100, height: 20, alpha: 0.0 });
+                    platforms.push({ x: 680, y: 280, width: 170, height: 240, type: 'normal' });
+                    hazards.push({ x: 140, y: 496, width: 540, height: 24, type: 'spike' });
+                    goal = { x: 760, y: 220, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 7: Nano Protocol
+            {
+                title: "7. Nano Protocol", target: "00:11.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 850, height: 80, type: 'normal' });
+                    platforms.push({ x: 240, y: 395, width: 360, height: 25, type: 'ceiling' });
+                    hazards.push({ x: 240, y: 371, width: 360, height: 24, type: 'spike' });
+                    
+                    interactivePads.push({ x: 170, y: 425, width: 35, height: 15, type: 'shrink', active: true });
+                    interactivePads.push({ x: 630, y: 425, width: 35, height: 15, type: 'grow', active: true });
+                    goal = { x: 760, y: 380, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 8: Reversal Glitch
+            {
+                title: "8. Reversal Glitch", target: "00:10.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 320, height: 80, type: 'normal' });
+                    platforms.push({ x: 420, y: 440, width: 430, height: 80, type: 'normal' });
+                    hazards.push({ x: 320, y: 496, width: 100, height: 24, type: 'spike' });
+                    
+                    triggers.push({
+                        x: 240, width: 20,
+                        action: () => {
+                            if (!controlsReversed) {
+                                controlsReversed = true;
+                                sfx.playTrigger();
+                                const banner = document.getElementById('glitch-banner');
+                                banner.style.opacity = '1';
+                                setTimeout(() => banner.style.opacity = '0', 2500);
+                            }
+                        }
+                    });
+                    goal = { x: 760, y: 380, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 9: Decoy Portal
+            {
+                title: "9. Decoy Portal", target: "00:12.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 850, height: 80, type: 'normal' });
+                    goal = { x: 760, y: 380, width: 34, height: 60, isDecoy: true, triggered: false };
+                    
+                    stalactites.push({ x: 620, y: 60, width: 24, height: 30, falling: false, vy: 0 });
+                    stalactites.push({ x: 700, y: 60, width: 24, height: 30, falling: false, vy: 0 });
+
+                    triggers.push({
+                        x: 640, width: 20,
+                        action: () => {
+                            if (goal.isDecoy && !goal.triggered) {
+                                goal.triggered = true;
+                                goal.x = -200;
+                                setTimeout(() => {
+                                    goal.x = 60;
+                                    goal.y = 380;
+                                    goal.isDecoy = false;
+                                }, 300);
+                                stalactites.forEach(s => s.falling = true);
+                                sfx.playTrigger();
+                            }
+                        }
+                    });
+                }
+            },
+            // LEVEL 10: Airport Conveyor
+            {
+                title: "10. Airport Conveyor", target: "00:11.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 160, height: 80, type: 'normal' });
+                    platforms.push({ x: 180, y: 440, width: 200, height: 20, type: 'conveyor', speed: -3.5 });
+                    platforms.push({ x: 420, y: 440, width: 200, height: 20, type: 'conveyor', speed: 3.5 });
+                    platforms.push({ x: 640, y: 440, width: 210, height: 80, type: 'normal' });
+                    
+                    hazards.push({ x: 160, y: 496, width: 20, height: 24, type: 'spike' });
+                    hazards.push({ x: 380, y: 496, width: 40, height: 24, type: 'spike' });
+                    goal = { x: 760, y: 380, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 11: Quantum Portals
+            {
+                title: "11. Quantum Portals", target: "00:12.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 200, height: 80, type: 'normal' });
+                    platforms.push({ x: 280, y: 440, width: 260, height: 80, type: 'normal' });
+                    platforms.push({ x: 620, y: 280, width: 230, height: 240, type: 'normal' });
+
+                    portals.push({ x: 160, y: 380, width: 30, height: 60, targetX: 300, targetY: 380, color: '#00e5ff' });
+                    portals.push({ x: 480, y: 380, width: 30, height: 60, targetX: 660, targetY: 220, color: '#ffd600' });
+                    portals.push({ x: 380, y: 380, width: 30, height: 60, targetX: 230, targetY: 460, color: '#ff1744' });
+
+                    hazards.push({ x: 200, y: 496, width: 80, height: 24, type: 'spike' });
+                    hazards.push({ x: 540, y: 496, width: 80, height: 24, type: 'spike' });
+                    goal = { x: 760, y: 220, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 12: Dual Laser Grid (CALIBRATED SAFE SPAWN + ALCOVES)
+            {
+                title: "12. Dual Laser Grid", target: "00:13.0",
+                spawnX: 80, spawnY: 320, // Clean safe spawn at (x: 80, y: 320)
+                build: () => {
+                    // Safe start platform x: 0..180 (x < 180 is 100% laser-free!)
+                    platforms.push({ x: 0, y: 380, width: 180, height: 140, type: 'normal' });
+                    
+                    // Alcove 1: x: 200..320 at y: 460
+                    platforms.push({ x: 200, y: 460, width: 120, height: 60, type: 'normal' });
+                    
+                    // Mid-step platform: x: 340..460 at y: 380
+                    platforms.push({ x: 340, y: 380, width: 120, height: 140, type: 'normal' });
+                    
+                    // Alcove 2: x: 480..600 at y: 460
+                    platforms.push({ x: 480, y: 460, width: 120, height: 60, type: 'normal' });
+                    
+                    // Exit platform: x: 620..850 at y: 380
+                    platforms.push({ x: 620, y: 380, width: 230, height: 140, type: 'normal' });
+
+                    // Dual sweeping lasers restricted to x: 180..620 and y: 260..360
+                    // Standing in alcove (y: 460) puts player at y: 424..460, completely safe below y2 = 360!
+                    lasers.push({ x1: 180, x2: 620, y1: 260, y2: 360, sweepSpeed: 2.2, dir: 1, currentY: 280 });
+                    lasers.push({ x1: 180, x2: 620, y1: 260, y2: 360, sweepSpeed: 1.6, dir: -1, currentY: 340 });
+
+                    // Dynamic floor spike on exit landing platform
+                    dynamicSpikes.push({ x: 670, platY: 380, width: 60, h: 0, targetH: 24, speed: 2.5, active: false });
+                    triggers.push({ x: 520, width: 20, action: () => { dynamicSpikes[0].active = true; sfx.playTrigger(); } });
+
+                    goal = { x: 770, y: 320, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 13: Stalactite Fall
+            {
+                title: "13. Stalactite Fall", target: "00:12.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 850, height: 80, type: 'sludge' });
+                    
+                    stalactites.push({ x: 260, y: 40, width: 24, height: 36, falling: false, vy: 0 });
+                    stalactites.push({ x: 420, y: 40, width: 24, height: 36, falling: false, vy: 0 });
+                    stalactites.push({ x: 580, y: 40, width: 24, height: 36, falling: false, vy: 0 });
+
+                    triggers.push({ x: 200, width: 20, action: () => stalactites[0].falling = true });
+                    triggers.push({ x: 360, width: 20, action: () => stalactites[1].falling = true });
+                    triggers.push({ x: 520, width: 20, action: () => stalactites[2].falling = true });
+
+                    goal = { x: 760, y: 380, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 14: Gravity Inversion
+            {
+                title: "14. Gravity Inversion", target: "00:13.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    platforms.push({ x: 0, y: 440, width: 220, height: 80, type: 'normal' });
+                    hazards.push({ x: 220, y: 496, width: 440, height: 24, type: 'spike' });
+                    platforms.push({ x: 160, y: 100, width: 480, height: 30, type: 'ceiling' });
+                    platforms.push({ x: 640, y: 440, width: 210, height: 80, type: 'normal' });
+
+                    hazards.push({ x: 380, y: 130, width: 60, height: 24, type: 'spike_ceiling' });
+
+                    interactivePads.push({ x: 170, y: 425, width: 35, height: 15, type: 'invert_gravity', active: true });
+                    interactivePads.push({ x: 600, y: 130, width: 35, height: 15, type: 'normalize_gravity', active: true });
+
+                    goal = { x: 760, y: 380, width: 34, height: 60 };
+                }
+            },
+            // LEVEL 15: Overlord Core Gauntlet
+            {
+                title: "15. Overlord Core Gauntlet", target: "00:18.0",
+                spawnX: 60, spawnY: 380,
+                build: () => {
+                    // Phase 1: Conveyor Belt
+                    platforms.push({ x: 0, y: 440, width: 160, height: 80, type: 'normal' });
+                    platforms.push({ x: 160, y: 440, width: 140, height: 20, type: 'conveyor', speed: -3.0 });
+                    hazards.push({ x: 160, y: 496, width: 140, height: 24, type: 'spike' });
+
+                    // Phase 2: Bounce Pad over spike wall
+                    platforms.push({ x: 300, y: 440, width: 100, height: 80, type: 'normal' });
+                    interactivePads.push({ x: 330, y: 425, width: 40, height: 15, type: 'bounce', active: true });
+                    platforms.push({ x: 420, y: 220, width: 30, height: 220, type: 'normal' });
+                    hazards.push({ x: 420, y: 196, width: 30, height: 24, type: 'spike' });
+
+                    // Phase 3: Gravity Inversion onto Ceiling
+                    platforms.push({ x: 450, y: 440, width: 140, height: 80, type: 'normal' });
+                    interactivePads.push({ x: 480, y: 425, width: 35, height: 15, type: 'invert_gravity', active: true });
+                    platforms.push({ x: 450, y: 100, width: 240, height: 30, type: 'ceiling' });
+
+                    // Final Exit Landing
+                    platforms.push({ x: 690, y: 440, width: 160, height: 80, type: 'normal' });
+                    interactivePads.push({ x: 650, y: 130, width: 35, height: 15, type: 'normalize_gravity', active: true });
+
+                    goal = { x: 770, y: 380, width: 34, height: 60 };
+                }
+            }
+        ];
+
+        /* LOAD LEVEL ENGINE */
+        function loadLevel(idx) {
+            currentLevelIdx = idx;
+            const lvl = levelDefinitions[idx];
+
+            platforms = [];
+            hazards = [];
+            dynamicSpikes = [];
+            stalactites = [];
+            triggers = [];
+            interactivePads = [];
+            portals = [];
+            lasers = [];
+            phantomPlatforms = [];
+            particles = [];
+            boulder = null;
+            controlsReversed = false;
+            document.getElementById('glitch-banner').style.opacity = '0';
+
+            lvl.build();
+
+            player.x = lvl.spawnX;
+            player.y = lvl.spawnY;
+            player.scale = 1.0;
+            player.width = 24;
+            player.height = 36;
+            player.vx = 0;
+            player.vy = 0;
+            player.grounded = false;
+            player.facing = 'right';
+            player.gravityInverted = false;
+            player.inSludge = false;
+
+            document.getElementById('hud-level').innerText = `${String(idx + 1).padStart(2, '0')} / 15`;
+            document.getElementById('hud-target').innerText = lvl.target;
+        }
+
+        /* PIXEL HUMAN CHARACTER RENDERER */
+        function drawPixelHuman(x, y, facing, grounded, vx, gravityInverted, scale) {
+            ctx.save();
+            ctx.translate(Math.round(x + (player.width) / 2), Math.round(y + (player.height) / 2));
+            ctx.scale(scale, scale);
+
+            if (gravityInverted) ctx.scale(1, -1);
+            if (facing === 'left') ctx.scale(-1, 1);
+
+            const walkCycle = Math.sin(Date.now() * 0.015) * (Math.abs(vx) > 0.1 ? 4 : 0);
+
+            // Head
+            ctx.fillStyle = '#ff1744';
+            ctx.fillRect(-8, -18, 16, 12);
+            ctx.fillStyle = '#0a0306';
+            ctx.fillRect(-9, -19, 18, 4);
+
+            // Visor
+            ctx.fillStyle = '#00e5ff';
+            ctx.fillRect(2, -14, 7, 4);
+
+            // Torso
+            ctx.fillStyle = '#1f0a14';
+            ctx.fillRect(-7, -6, 14, 14);
+            ctx.fillStyle = '#ff1744';
+            ctx.fillRect(-2, -4, 4, 10);
+
+            // Legs
+            ctx.fillStyle = '#00e5ff';
+            if (!grounded) {
+                ctx.fillRect(-7, 8, 5, 10);
+                ctx.fillRect(2, 6, 5, 8);
+            } else {
+                ctx.fillRect(-7, 8 + walkCycle, 5, 10 - walkCycle);
+                ctx.fillRect(2, 8 - walkCycle, 5, 10 + walkCycle);
+            }
+
+            ctx.restore();
+        }
+
+        /* SPARK PARTICLES */
+        function spawnSparks(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 1.0,
+                    decay: 0.03 + Math.random() * 0.03,
+                    color: color
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            for (let p of particles) {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 4;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.restore();
+            }
+        }
+
+        function killPlayer() {
+            sfx.playDeath();
+            deathCount++;
+            document.getElementById('hud-deaths').innerText = deathCount;
+            spawnSparks(player.x + player.width / 2, player.y + player.height / 2, '#ff1744', 25);
+            loadLevel(currentLevelIdx);
+        }
+
+        /* GAME LOOP UPDATE */
+        function update() {
+            let effSpeed = player.inSludge ? MOVE_SPEED * 0.45 : MOVE_SPEED;
+
+            // Handle Horizontal Input
+            let moveLeft = controlsReversed ? keys.right : keys.left;
+            let moveRight = controlsReversed ? keys.left : keys.right;
+
+            if (moveLeft) {
+                player.vx = -effSpeed;
+                player.facing = 'left';
+            } else if (moveRight) {
+                player.vx = effSpeed;
+                player.facing = 'right';
+            } else {
+                player.vx *= 0.7;
+            }
+
+            // Jump Execution
+            if (keys.jump && player.grounded) {
+                const jumpPower = player.inSludge ? JUMP_FORCE * 0.75 : JUMP_FORCE;
+                player.vy = player.gravityInverted ? jumpPower : -jumpPower;
+                player.grounded = false;
+                sfx.playJump();
+            }
+
+            // Gravity
+            if (player.gravityInverted) {
+                player.vy -= GRAVITY;
+                if (player.vy < -12) player.vy = -12;
+            } else {
+                player.vy += GRAVITY;
+                if (player.vy > 12) player.vy = 12;
+            }
+
+            player.x += player.vx;
+            player.y += player.vy;
+            player.grounded = false;
+            player.inSludge = false;
+
+            // Screen Bounds
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+            if (player.y > canvas.height + 60 || player.y < -100) {
+                killPlayer();
+                return;
+            }
+
+            /* PLATFORMS COLLISION */
+            for (let p of platforms) {
+                if (p.type === 'sludge' && player.x < p.x + p.width && player.x + player.width > p.x && player.y + player.height >= p.y - 4) {
+                    player.inSludge = true;
+                }
+
+                if (!player.gravityInverted) {
+                    if (player.x < p.x + p.width && player.x + player.width > p.x &&
+                        player.y + player.height >= p.y && player.y + player.height <= p.y + 16 && player.vy >= 0) {
+                        player.grounded = true;
+                        player.vy = 0;
+                        player.y = p.y - player.height;
+
+                        if (p.type === 'conveyor') player.x += p.speed;
+                    }
+                } else {
+                    if (player.x < p.x + p.width && player.x + player.width > p.x &&
+                        player.y <= p.y + p.height && player.y >= p.y + p.height - 16 && player.vy <= 0) {
+                        player.grounded = true;
+                        player.vy = 0;
+                        player.y = p.y + p.height;
+                    }
+                }
+            }
+
+            /* PHANTOM PLATFORMS */
+            for (let ph of phantomPlatforms) {
+                const dist = Math.hypot((player.x + player.width / 2) - (ph.x + ph.width / 2), (player.y + player.height / 2) - (ph.y + ph.height / 2));
+                if (dist < 150) {
+                    ph.alpha = Math.min(1.0, ph.alpha + 0.08);
+                } else {
+                    ph.alpha = Math.max(0.0, ph.alpha - 0.04);
+                }
+
+                if (ph.alpha >= 0.3 && !player.gravityInverted) {
+                    if (player.x < ph.x + ph.width && player.x + player.width > ph.x &&
+                        player.y + player.height >= ph.y && player.y + player.height <= ph.y + 16 && player.vy >= 0) {
+                        player.grounded = true;
+                        player.vy = 0;
+                        player.y = ph.y - player.height;
+                    }
+                }
+            }
+
+            /* DYNAMIC FLOOR-SPRINGING SPIKES */
+            for (let ds of dynamicSpikes) {
+                if (ds.active) {
+                    ds.h = Math.min(ds.targetH, ds.h + ds.speed);
+                }
+                const spikeY = ds.platY - ds.h;
+                if (ds.h > 4) {
+                    if (player.x < ds.x + ds.width && player.x + player.width > ds.x &&
+                        player.y < ds.platY && player.y + player.height > spikeY) {
+                        killPlayer();
+                        return;
+                    }
+                }
+            }
+
+            /* STALACTITE DROPS */
+            for (let st of stalactites) {
+                if (st.falling) {
+                    st.vy += 0.6;
+                    st.y += st.vy;
+                }
+                if (player.x < st.x + st.width && player.x + player.width > st.x &&
+                    player.y < st.y + st.height && player.y + player.height > st.y) {
+                    killPlayer();
+                    return;
+                }
+            }
+
+            /* TRIGGERS */
+            for (let tr of triggers) {
+                if (player.x + player.width > tr.x && player.x < tr.x + tr.width) {
+                    tr.action();
+                }
+            }
+
+            /* INTERACTIVE PADS */
+            for (let pad of interactivePads) {
+                if (pad.active && player.x < pad.x + pad.width && player.x + player.width > pad.x &&
+                    player.y < pad.y + pad.height && player.y + player.height > pad.y) {
+
+                    if (pad.type === 'bounce') {
+                        player.vy = -16.0;
+                        player.grounded = false;
+                        sfx.playJump();
+                        spawnSparks(pad.x + 20, pad.y, '#ffd600', 15);
+                    } else if (pad.type === 'shrink' && player.scale === 1.0) {
+                        player.scale = 0.5;
+                        player.width = 12;
+                        player.height = 18;
+                        sfx.playTrigger();
+                        spawnSparks(pad.x + 15, pad.y, '#00e5ff', 15);
+                    } else if (pad.type === 'grow' && player.scale === 0.5) {
+                        player.scale = 1.0;
+                        player.width = 24;
+                        player.height = 36;
+                        sfx.playTrigger();
+                        spawnSparks(pad.x + 15, pad.y, '#ff1744', 15);
+                    } else if (pad.type === 'invert_gravity' && !player.gravityInverted) {
+                        player.gravityInverted = true;
+                        player.vy = -6;
+                        sfx.playTrigger();
+                        spawnSparks(pad.x + 15, pad.y, '#d500f9', 15);
+                    } else if (pad.type === 'normalize_gravity' && player.gravityInverted) {
+                        player.gravityInverted = false;
+                        player.vy = 6;
+                        sfx.playTrigger();
+                        spawnSparks(pad.x + 15, pad.y, '#00e5ff', 15);
+                    }
+                }
+            }
+
+            /* PORTALS */
+            for (let port of portals) {
+                if (player.x < port.x + port.width && player.x + player.width > port.x &&
+                    player.y < port.y + port.height && player.y + player.height > port.y) {
+                    sfx.playTeleport();
+                    spawnSparks(port.x + 15, port.y + 30, port.color, 20);
+                    player.x = port.targetX;
+                    player.y = port.targetY;
+                    break;
+                }
+            }
+
+            /* BOULDER */
+            if (boulder) {
+                boulder.x += boulder.vx;
+                const dist = Math.hypot((player.x + player.width / 2) - boulder.x, (player.y + player.height / 2) - boulder.y);
+                if (dist < boulder.radius + 10) {
+                    killPlayer();
+                    return;
+                }
+            }
+
+            /* LASERS */
+            for (let l of lasers) {
+                l.currentY += l.sweepSpeed * l.dir;
+                const minY = l.y1 !== undefined ? l.y1 : 140;
+                if (l.currentY <= minY || l.currentY >= l.y2) l.dir *= -1;
+
+                const lx1 = l.x1 !== undefined ? l.x1 : 0;
+                const lx2 = l.x2 !== undefined ? l.x2 : canvas.width;
+
+                if (player.x + player.width > lx1 && player.x < lx2) {
+                    if (player.y < l.currentY + 6 && player.y + player.height > l.currentY - 6) {
+                        killPlayer();
+                        return;
+                    }
+                }
+            }
+
+            /* EXIT GOAL DETECTION */
+            if (player.x < goal.x + goal.width && player.x + player.width > goal.x &&
+                player.y < goal.y + goal.height && player.y + player.height > goal.y) {
+                sfx.playWin();
+                spawnSparks(goal.x + 17, goal.y + 30, '#ffd600', 30);
+                
+                if (currentLevelIdx < levelDefinitions.length - 1) {
+                    loadLevel(currentLevelIdx + 1);
+                } else {
+                    // VICTORY!
+                    clearInterval(gameTimerInterval);
+                    document.getElementById('final-time').innerText = document.getElementById('hud-timer').innerText;
+                    document.getElementById('final-deaths').innerText = deathCount;
+                    document.getElementById('victory-modal').classList.remove('hidden');
+                }
+            }
+
+            updateParticles();
+        }
+
+        /* RENDERING ENGINE */
+        function render() {
+            // Background Clear
+            ctx.fillStyle = '#0a0306';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Subtle Background CRT Grid
+            ctx.strokeStyle = 'rgba(255, 23, 68, 0.06)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            // Platforms
+            for (let p of platforms) {
+                ctx.save();
+                if (p.type === 'conveyor') {
+                    ctx.fillStyle = '#1e0818';
+                    ctx.fillRect(p.x, p.y, p.width, p.height);
+                    ctx.fillStyle = '#00e5ff';
+                    const offset = (Date.now() * 0.05 * p.speed) % 20;
+                    for (let cx = p.x + offset; cx < p.x + p.width; cx += 20) {
+                        if (cx >= p.x && cx <= p.x + p.width - 8) {
+                            ctx.fillRect(cx, p.y + 4, 8, 4);
+                        }
+                    }
+                } else if (p.type === 'sludge') {
+                    ctx.fillStyle = '#1a2208';
+                    ctx.fillRect(p.x, p.y, p.width, p.height);
+                    ctx.fillStyle = '#76ff03';
+                    ctx.fillRect(p.x, p.y, p.width, 6);
+                } else {
+                    ctx.fillStyle = '#17060e';
+                    ctx.fillRect(p.x, p.y, p.width, p.height);
+                    ctx.strokeStyle = '#ff1744';
+                    ctx.shadowColor = '#ff1744';
+                    ctx.shadowBlur = 6;
+                    ctx.strokeRect(p.x, p.y, p.width, p.height);
+                }
+                ctx.restore();
+            }
+
+            // Phantom Platforms
+            for (let ph of phantomPlatforms) {
+                if (ph.alpha > 0.05) {
+                    ctx.save();
+                    ctx.globalAlpha = ph.alpha;
+                    ctx.fillStyle = '#00e5ff';
+                    ctx.shadowColor = '#00e5ff';
+                    ctx.shadowBlur = 10;
+                    ctx.fillRect(ph.x, ph.y, ph.width, ph.height);
+                    ctx.restore();
+                }
+            }
+
+            // Dynamic Floor Spikes
+            for (let ds of dynamicSpikes) {
+                if (ds.h > 2) {
+                    ctx.save();
+                    ctx.fillStyle = '#ff1744';
+                    ctx.shadowColor = '#ff1744';
+                    ctx.shadowBlur = 8;
+                    const spikeW = 12;
+                    const count = Math.floor(ds.width / spikeW);
+                    for (let i = 0; i < count; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(ds.x + i * spikeW, ds.platY);
+                        ctx.lineTo(ds.x + i * spikeW + spikeW / 2, ds.platY - ds.h);
+                        ctx.lineTo(ds.x + (i + 1) * spikeW, ds.platY);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+            }
+
+            // Stalactites
+            for (let st of stalactites) {
+                ctx.save();
+                ctx.fillStyle = '#ff1744';
+                ctx.beginPath();
+                ctx.moveTo(st.x, st.y);
+                ctx.lineTo(st.x + st.width / 2, st.y + st.height);
+                ctx.lineTo(st.x + st.width, st.y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Static Platform Spikes
+            for (let h of hazards) {
+                ctx.save();
+                ctx.fillStyle = '#ff1744';
+                const spikeWidth = 12;
+                const numSpikes = Math.floor(h.width / spikeWidth);
+                
+                if (h.type === 'spike') {
+                    for (let i = 0; i < numSpikes; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(h.x + i * spikeWidth, h.y + h.height);
+                        ctx.lineTo(h.x + i * spikeWidth + spikeWidth / 2, h.y);
+                        ctx.lineTo(h.x + (i + 1) * spikeWidth, h.y + h.height);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                } else if (h.type === 'spike_ceiling') {
+                    for (let i = 0; i < numSpikes; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(h.x + i * spikeWidth, h.y);
+                        ctx.lineTo(h.x + i * spikeWidth + spikeWidth / 2, h.y + h.height);
+                        ctx.lineTo(h.x + (i + 1) * spikeWidth, h.y);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+                ctx.restore();
+            }
+
+            // Interactive Pads
+            for (let pad of interactivePads) {
+                ctx.save();
+                if (pad.type === 'bounce') ctx.fillStyle = '#ffd600';
+                else if (pad.type === 'shrink') ctx.fillStyle = '#00e5ff';
+                else if (pad.type === 'grow') ctx.fillStyle = '#ff1744';
+                else if (pad.type === 'invert_gravity') ctx.fillStyle = '#d500f9';
+                else ctx.fillStyle = '#00e5ff';
+
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.shadowBlur = 10;
+                ctx.fillRect(pad.x, pad.y, pad.width, pad.height);
+                ctx.restore();
+            }
+
+            // Portals
+            for (let port of portals) {
+                ctx.save();
+                ctx.fillStyle = port.color;
+                ctx.shadowColor = port.color;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.ellipse(port.x + port.width / 2, port.y + port.height / 2, port.width / 2, port.height / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Boulder
+            if (boulder) {
+                ctx.save();
+                ctx.fillStyle = '#ff1744';
+                ctx.shadowColor = '#ff1744';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(boulder.x, boulder.y, boulder.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Lasers
+            for (let l of lasers) {
+                ctx.save();
+                ctx.strokeStyle = '#00e5ff';
+                ctx.shadowColor = '#00e5ff';
+                ctx.shadowBlur = 15;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                const lx1 = l.x1 !== undefined ? l.x1 : 0;
+                const lx2 = l.x2 !== undefined ? l.x2 : canvas.width;
+                ctx.moveTo(lx1, l.currentY);
+                ctx.lineTo(lx2, l.currentY);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Exit Goal Portal Door
+            ctx.save();
+            ctx.fillStyle = '#ffd600';
+            ctx.shadowColor = '#ffd600';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
+            ctx.fillStyle = '#0a0306';
+            ctx.fillRect(goal.x + 4, goal.y + 4, goal.width - 8, goal.height - 8);
+            ctx.restore();
+
+            drawParticles();
+
+            // Player Character
+            drawPixelHuman(player.x, player.y, player.facing, player.grounded, player.vx, player.gravityInverted, player.scale);
+        }
+
+        /* MAIN GAME LOOP */
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* TIMER SYSTEM */
+        function startTimer() {
+            startTime = Date.now();
+            gameTimerInterval = setInterval(() => {
+                elapsedSeconds = (Date.now() - startTime) / 1000;
+                const mins = Math.floor(elapsedSeconds / 60);
+                const secs = (elapsedSeconds % 60).toFixed(1);
+                document.getElementById('hud-timer').innerText = 
+                    `${String(mins).padStart(2, '0')}:${String(secs).padStart(4, '0')}`;
+            }, 100);
+        }
+
+        /* INPUT LISTENERS */
+        window.addEventListener('keydown', (e) => {
+            sfx.init();
+            if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = true;
+            if (e.key === 'w' || e.key === 'W' || e.key === ' ' || e.key === 'ArrowUp') keys.jump = true;
+            if (e.key === 'r' || e.key === 'R') loadLevel(currentLevelIdx);
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = false;
+            if (e.key === 'w' || e.key === 'W' || e.key === ' ' || e.key === 'ArrowUp') keys.jump = false;
+        });
+
+        function bindTouchBtn(id, keyProp) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                sfx.init();
+                keys[keyProp] = true;
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[keyProp] = false;
+            });
+        }
+
+        bindTouchBtn('btn-left', 'left');
+        bindTouchBtn('btn-right', 'right');
+        bindTouchBtn('btn-jump', 'jump');
+
+        // Startup Modal Controls
+        document.getElementById('btn-select-kbm').addEventListener('click', () => {
+            sfx.init();
+            touchMode = false;
+            document.getElementById('touch-controls').classList.add('hidden');
+            document.getElementById('mode-label').innerText = 'KBM';
+            document.getElementById('startup-modal').classList.add('hidden');
+            startTimer();
+            loadLevel(0);
+        });
+
+        document.getElementById('btn-select-touch').addEventListener('click', () => {
+            sfx.init();
+            touchMode = true;
+            document.getElementById('touch-controls').classList.remove('hidden');
+            document.getElementById('mode-label').innerText = 'TOUCH';
+            document.getElementById('startup-modal').classList.add('hidden');
+            startTimer();
+            loadLevel(0);
+        });
+
+        // Header Action Toggles
+        document.getElementById('btn-mode-toggle').addEventListener('click', () => {
+            touchMode = !touchMode;
+            document.getElementById('touch-controls').classList.toggle('hidden', !touchMode);
+            document.getElementById('mode-label').innerText = touchMode ? 'TOUCH' : 'KBM';
+        });
+
+        document.getElementById('btn-sfx-toggle').addEventListener('click', () => {
+            sfx.muted = !sfx.muted;
+            document.getElementById('btn-sfx-toggle').innerText = `SFX: ${sfx.muted ? 'OFF' : 'ON'}`;
+        });
+
+        document.getElementById('btn-restart-game').addEventListener('click', () => {
+            document.getElementById('victory-modal').classList.add('hidden');
+            deathCount = 0;
+            document.getElementById('hud-deaths').innerText = '0';
+            startTimer();
+            loadLevel(0);
+        });
+
+        window.onload = () => {
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
